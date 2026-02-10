@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  new:
+    build: .
+    container_name: new-zhirnov
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_APP_URL=https://zhirnov.studio
+      - NEXT_PUBLIC_SITE_URL=https://zhirnov.studio
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - UPLOAD_DIR=/tmp/uploads
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.new.rule=Host(`zhirnov.studio`) || Host(`www.zhirnov.studio`)"
+      - "traefik.http.routers.new.entrypoints=web,websecure"
+      - "traefik.http.routers.new.tls=true"
+      - "traefik.http.routers.new.tls.certresolver=letsencrypt"
+      - "traefik.http.services.new.loadbalancer.server.port=3000"
+      - "traefik.docker.network=traefik-network"
+      - "traefik.http.middlewares.new-compress.compress=true"
+      - "traefik.http.routers.new.middlewares=new-compress@docker"
+    networks:
+      - traefik-network
+    volumes:
+      - uploads_data:/tmp/uploads
+
+volumes:
+  uploads_data:
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:3000"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
+
+networks:
+  traefik-network:
+    external: true
