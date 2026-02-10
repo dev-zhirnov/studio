@@ -65,7 +65,7 @@ const Navbar: React.FC<NavbarProps> = ({ onLogoClick, onContactClick, tg_link })
                   </div>
                   <span className="justify-center text-white text-lg font-normal leading-6">{translations.ourChannel}</span>
                     <div className="px-2 py-0.5 bg-white rounded-[10px] flex justify-center items-center gap-1">
-                      <div className="justify-center text-[#1D2023] text-base font-normal leading-6">1.5к</div>
+                      <div className="justify-center text-[#1D2023] text-base font-normal leading-6">1.2к</div>
                   </div>
               </div>
             </a>
