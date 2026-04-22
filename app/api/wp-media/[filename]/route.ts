@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import path from 'path';
-import { resolveMediaPath } from '@/lib/wp-media';
+import { findMediaFile } from '@/lib/wp-media';
 
 const CONTENT_TYPES: Record<string, string> = {
   '.jpg': 'image/jpeg',
@@ -25,8 +25,12 @@ export async function GET(
     return NextResponse.json({ error: 'Bad filename' }, { status: 400 });
   }
 
+  const fullPath = await findMediaFile(filename);
+  if (!fullPath) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   try {
-    const fullPath = await resolveMediaPath(filename);
     const file = await readFile(fullPath);
     const ext = path.extname(filename).toLowerCase();
     const contentType = CONTENT_TYPES[ext] || 'application/octet-stream';

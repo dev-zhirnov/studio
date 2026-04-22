@@ -7,8 +7,13 @@
 //      Otherwise download once, then rewrite. Failures fall back to the original URL.
 //   3. Return the modified post — the page renders with /api/wp-media/* URLs.
 //
-// Files live in $UPLOAD_DIR/wp-media (i.e. /tmp/uploads/wp-media in prod), the
-// same persistent volume already used by the contact-form upload route.
+// Two storage locations, chosen per phase:
+//   - Build time (next build): public/wp-media/ — gets baked into the Docker
+//     image via `COPY /app/public ./public`, so the first request after a
+//     redeploy already has everything.
+//   - Runtime (ISR revalidations, on-demand renders): /tmp/uploads/wp-media/ —
+//     the persistent named volume, survives container restarts.
+// The route handler reads from both (volume first, image fallback).
 
 import { promises as fs, constants as fsConstants } from 'fs';
 import path from 'path';
@@ -19,10 +24,22 @@ const PUBLIC_BASE = '/api/wp-media';
 const FETCH_TIMEOUT_MS = 10_000;
 const SUBDIR = 'wp-media';
 
-let cachedDir: string | null = null;
+function isBuildPhase(): boolean {
+  return process.env.NEXT_PHASE === 'phase-production-build';
+}
 
-async function getMediaDir(): Promise<string> {
-  if (cachedDir) return cachedDir;
+export const BUILD_MEDIA_DIR = path.join(process.cwd(), 'public', SUBDIR);
+
+let cachedWriteDir: string | null = null;
+
+async function getWriteDir(): Promise<string> {
+  if (cachedWriteDir) return cachedWriteDir;
+
+  if (isBuildPhase()) {
+    await fs.mkdir(BUILD_MEDIA_DIR, { recursive: true });
+    cachedWriteDir = BUILD_MEDIA_DIR;
+    return cachedWriteDir;
+  }
 
   const bases = [
     process.env.UPLOAD_DIR,
@@ -35,7 +52,7 @@ async function getMediaDir(): Promise<string> {
     try {
       await fs.mkdir(dir, { recursive: true });
       await fs.access(dir, fsConstants.W_OK);
-      cachedDir = dir;
+      cachedWriteDir = dir;
       return dir;
     } catch {
       // try next candidate
@@ -44,9 +61,26 @@ async function getMediaDir(): Promise<string> {
   throw new Error('[wp-media] No writable media directory found');
 }
 
-export async function resolveMediaPath(filename: string): Promise<string> {
-  const dir = await getMediaDir();
-  return path.join(dir, filename);
+// Read locations for the route handler — volume first (fresh ISR downloads),
+// then the image-baked public/wp-media/ (build-time downloads).
+const READ_DIRS = [
+  process.env.UPLOAD_DIR ? path.join(process.env.UPLOAD_DIR, SUBDIR) : null,
+  path.join('/tmp/uploads', SUBDIR),
+  path.join(process.cwd(), 'uploads', SUBDIR),
+  BUILD_MEDIA_DIR,
+].filter(Boolean) as string[];
+
+export async function findMediaFile(filename: string): Promise<string | null> {
+  for (const dir of READ_DIRS) {
+    const p = path.join(dir, filename);
+    try {
+      await fs.access(p, fsConstants.R_OK);
+      return p;
+    } catch {
+      // try next
+    }
+  }
+  return null;
 }
 
 function filenameFor(url: string): string {
@@ -75,30 +109,23 @@ function shouldCache(url: string): boolean {
   }
 }
 
-async function exists(p: string): Promise<boolean> {
-  try {
-    await fs.access(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export async function cacheImage(url: string): Promise<string> {
   if (!shouldCache(url)) return url;
 
   const filename = filenameFor(url);
   const localUrl = `${PUBLIC_BASE}/${filename}`;
 
+  // Already cached somewhere (volume or baked-in public/)? Just rewrite.
+  if (await findMediaFile(filename)) return localUrl;
+
   let fullPath: string;
   try {
-    fullPath = await resolveMediaPath(filename);
+    const dir = await getWriteDir();
+    fullPath = path.join(dir, filename);
   } catch (err) {
     console.warn('[wp-media] no writable dir, serving original URL:', err);
     return url;
   }
-
-  if (await exists(fullPath)) return localUrl;
 
   try {
     const controller = new AbortController();

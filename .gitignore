@@ -32,6 +32,9 @@ tsconfig.tsbuildinfo
 # Per-assistant working dirs
 .claude/
 
+# Build-time WP media cache — regenerated on every build, never committed
+public/wp-media/
+
 # Local-only assistant notes (secrets, server access details)
 CLAUDE.local.md
 *.local.md

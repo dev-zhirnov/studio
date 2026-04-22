@@ -31,8 +31,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy workers directory
 COPY --from=builder --chown=nextjs:nodejs /app/workers ./workers
 
-# Create uploads directory
-RUN mkdir -p /opt/projects/new/uploads && chown nextjs:nodejs /opt/projects/new/uploads
+# Pre-create /tmp/uploads with the correct owner so that when Docker mounts
+# a fresh named volume here, the volume inherits these perms (Docker copies
+# ownership from the image's mount point into empty volumes on first mount).
+# Without this, the volume comes up root-owned and the nextjs user can't
+# write to it — contact-form uploads and the wp-media cache both need this.
+RUN mkdir -p /tmp/uploads && chown -R nextjs:nodejs /tmp/uploads
 
 # Switch to non-root user
 USER nextjs
