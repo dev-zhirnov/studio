@@ -5,6 +5,7 @@ import type { GetServerSideProps, InferGetServerSidePropsType } from 'next';
 import SEO from '../../components/SEO';
 import Head from 'next/head';
 import { WP_SITE_URL } from '../../lib/config';
+import { processWpPost, processWpPosts } from '../../lib/wp-media';
 
 // Define the shape of a WordPress Post
 interface WpPost {
@@ -60,8 +61,13 @@ export const getServerSideProps: GetServerSideProps<{ post: WpPost | null, seo: 
     const relatedPosts: WpPost[] = relatedPostsRes.ok ? await relatedPostsRes.json() : [];
     const seo: RankMathHead | null = seoRes.ok ? await seoRes.json() : null;
 
-    return { 
-      props: { post, seo, relatedPosts },
+    const [processedPost, processedRelated] = await Promise.all([
+      processWpPost(post),
+      processWpPosts(relatedPosts),
+    ]);
+
+    return {
+      props: { post: processedPost, seo, relatedPosts: processedRelated },
     };
   } catch (error) {
     console.error(error);

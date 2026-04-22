@@ -49,6 +49,17 @@ module.exports = {
           },
         ],
       },
+      {
+        // Cached WP media — see lib/wp-media.ts. Filenames are content hashes,
+        // so a long immutable cache is safe.
+        source: '/api/wp-media/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
     ];
   },
 };

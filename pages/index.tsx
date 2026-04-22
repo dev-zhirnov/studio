@@ -7,6 +7,7 @@ import SEO from '../components/SEO';
 import { useRouter } from 'next/router';
 import type { GetStaticProps, InferGetStaticPropsType } from 'next';
 import { WP_SITE_URL } from '../lib/config';
+import { processWpPosts } from '../lib/wp-media';
 
 // Define the shape of a WordPress Post
 interface WpPost {
@@ -74,12 +75,17 @@ export const getStaticProps: GetStaticProps<{
 
     const filteredCategories = categories.filter(cat => cat.slug !== 'empty');
 
-    return { 
-      props: { 
-        posts, 
+    // Cache featured/ACF/inline images locally and rewrite URLs in the post
+    // payload — see lib/wp-media.ts. Failures fall back to original WP URLs,
+    // so this can never break the page render.
+    const processedPosts = await processWpPosts(posts);
+
+    return {
+      props: {
+        posts: processedPosts,
         categories: filteredCategories,
       },
-      revalidate: 60, 
+      revalidate: 60,
     };
   } catch (error) {
     console.error("getStaticProps Error:", error);

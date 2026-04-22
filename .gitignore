@@ -25,3 +25,13 @@ dist-ssr
 .gemini
 .env
 .next
+
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo
+
+# Per-assistant working dirs
+.claude/
+
+# Local-only assistant notes (secrets, server access details)
+CLAUDE.local.md
+*.local.md
