@@ -7,6 +7,10 @@ export default function Document() {
       <Head>
         <meta charSet="UTF-8" />
         <title>Zhirnov | IT Products</title>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+        <link rel="icon" href="/favicon-16.png" sizes="16x16" type="image/png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

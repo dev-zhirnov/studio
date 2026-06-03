@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <style>
+    .mark { fill: #333333; }
+    @media (prefers-color-scheme: dark) { .mark { fill: #f5f5f5; } }
+  </style>
+  <path class="mark" d="M14.0578 8.01439L21.0879 3.98258L23.4307 8.01364L16.3999 12.0447L23.43 16.0765L21.0871 20.1076L14.0578 16.0758V24H9.37214V16.0765L2.34284 20.1083L0 16.0773L7.0293 12.0447L0.000762645 8.01439L2.34361 3.98333L9.37214 8.01364V0H14.0578V8.01439Z"/>
+</svg>
