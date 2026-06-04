@@ -13,6 +13,8 @@ interface WpPost {
   acf: {
     external_link?: string;
     external_link_image?: string;
+    preview_square?: string;
+    preview_rect?: string;
   };
 }
 
@@ -26,25 +28,32 @@ interface CasesProps {
   categories: WpCategory[];
 }
 
-const CaseCard: React.FC<{ post: WpPost }> = ({ post }) => {
+const CaseCard: React.FC<{ post: WpPost; wide?: boolean }> = ({ post, wide = false }) => {
   const featuredMedia = post._embedded?.['wp:featuredmedia']?.[0];
-  const image = featuredMedia?.source_url;
+  const fallback = featuredMedia?.source_url;
+  // Квадратное превью — для квадратных слотов и мобильной версии,
+  // прямоугольное — для широкой (первой) карточки на десктопе. Фоллбэк — featured.
+  const squareImage = post.acf?.preview_square || fallback;
+  const rectImage = post.acf?.preview_rect || fallback;
   const color = '#e5e7eb';
 
   const hasExternalLink = post.acf && post.acf.external_link;
 
   const CardContent = () => (
     <>
-      <div 
-        className="relative w-full aspect-[591/332] rounded-[32px] overflow-hidden"
+      <div
+        className={`relative w-full rounded-[32px] overflow-hidden ${wide ? 'aspect-square md:aspect-[1214/680]' : 'aspect-square'}`}
         style={{ backgroundColor: color }}
       >
-        {image && (
-          <img 
-            src={image} 
-            alt={post.title.rendered} 
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-          />
+        {squareImage && (
+          <picture>
+            {wide && rectImage && <source media="(min-width: 768px)" srcSet={rectImage} />}
+            <img
+              src={squareImage}
+              alt={post.title.rendered}
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+          </picture>
         )}
         {hasExternalLink && post.acf.external_link_image && (
           <div className="absolute bottom-5 right-5 w-12 h-12 md:w-16 md:h-16 bg-[#111111] rounded-2xl md:rounded-[1.25rem] flex items-center justify-center text-white shadow-xl z-10">
@@ -53,22 +62,24 @@ const CaseCard: React.FC<{ post: WpPost }> = ({ post }) => {
         )}
       </div>
       
-      <div className="mt-2 md:mt-4 self-stretch justify-center text-neutral-800 text-lg md:text-2xl font-normal leading-6 md:leading-7 line-clamp-3 tracking-[-0.015em] group-hover:text-[#168D65] transition-colors"
+      <div className={`self-stretch justify-center text-neutral-800 font-normal line-clamp-3 tracking-[-0.015em] group-hover:text-[#168D65] transition-colors ${wide ? 'mt-2 md:mt-6 text-lg md:text-[1.75rem] leading-6 md:leading-9' : 'mt-2 md:mt-4 text-lg md:text-2xl leading-6 md:leading-7'}`}
         dangerouslySetInnerHTML={{ __html: post.title.rendered }}
       />
     </>
   );
 
+  const rootClass = `flex flex-col w-full text-left group ${wide ? 'md:col-span-2' : ''}`;
+
   if (hasExternalLink) {
     return (
-      <a href={post.acf.external_link} target="_blank" rel="noopener noreferrer" className="flex flex-col w-full text-left group">
+      <a href={post.acf.external_link} target="_blank" rel="noopener noreferrer" className={rootClass}>
         <CardContent />
       </a>
     );
   }
 
   return (
-    <Link href={`/projects/${post.slug}`} prefetch className="flex flex-col w-full text-left group">
+    <Link href={`/projects/${post.slug}`} prefetch className={rootClass}>
       <CardContent />
     </Link>
   );
@@ -130,9 +141,11 @@ const Cases: React.FC<CasesProps> = ({ posts, categories }) => {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 md:gap-x-4 md:gap-y-8 max-w-[1214px] mx-auto">
-        {filteredCases.map((post) => (
-          <CaseCard key={post.id} post={post} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 md:gap-x-8 md:gap-y-8 max-w-[1214px] mx-auto">
+        {filteredCases.map((post, index) => (
+          // Широкий слот — только у первого поста И только если у него загружено
+          // прямоугольное превью; иначе встаёт квадратом в общий ряд.
+          <CaseCard key={post.id} post={post} wide={index === 0 && !!post.acf?.preview_rect} />
         ))}
       </div>
     </section>
