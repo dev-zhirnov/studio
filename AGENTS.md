@@ -20,7 +20,7 @@ There is no test suite configured.
 
 ## Architecture
 
-This is a **Next.js 16 / React 19** marketing site for Zhirnov Studio that pulls content from a **headless WordPress** instance (`WP_SITE_URL`, default `https://cq77457.tmweb.ru/ZHIRNOV`, overridable via `NEXT_PUBLIC_WP_SITE_URL`).
+This is a **Next.js 16 / React 19** marketing site for Zhirnov Studio that pulls content from a **headless WordPress** instance (`WP_SITE_URL`, default `https://zhirnov.studio/pn`, overridable via `NEXT_PUBLIC_WP_SITE_URL`).
 
 ### Hybrid Pages Router + App Router
 
