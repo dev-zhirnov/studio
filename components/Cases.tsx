@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 
 interface WpPost {
@@ -28,7 +28,40 @@ interface CasesProps {
   categories: WpCategory[];
 }
 
-const CaseCard: React.FC<{ post: WpPost; wide?: boolean }> = ({ post, wide = false }) => {
+// Картинка карточки: ленивая загрузка (кроме первой — она LCP) + fade-in из плейсхолдера.
+const CardImage: React.FC<{
+  square: string;
+  rect?: string;
+  wide: boolean;
+  eager: boolean;
+  alt: string;
+}> = ({ square, rect, wide, eager, alt }) => {
+  const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // Если картинка пришла из кэша до гидрации — onLoad уже не сработает.
+  useEffect(() => {
+    if (imgRef.current?.complete) setLoaded(true);
+  }, []);
+
+  return (
+    <picture>
+      {wide && rect && <source media="(min-width: 768px)" srcSet={rect} />}
+      <img
+        ref={imgRef}
+        src={square}
+        alt={alt}
+        loading={eager ? 'eager' : 'lazy'}
+        fetchPriority={eager ? 'high' : undefined}
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        className={`absolute inset-0 w-full h-full object-cover transition-[opacity,transform] duration-700 group-hover:scale-105 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+      />
+    </picture>
+  );
+};
+
+const CaseCard: React.FC<{ post: WpPost; wide?: boolean; eager?: boolean }> = ({ post, wide = false, eager = false }) => {
   const featuredMedia = post._embedded?.['wp:featuredmedia']?.[0];
   const fallback = featuredMedia?.source_url;
   // Квадратное превью — для квадратных слотов и мобильной версии,
@@ -46,14 +79,13 @@ const CaseCard: React.FC<{ post: WpPost; wide?: boolean }> = ({ post, wide = fal
         style={{ backgroundColor: color }}
       >
         {squareImage && (
-          <picture>
-            {wide && rectImage && <source media="(min-width: 768px)" srcSet={rectImage} />}
-            <img
-              src={squareImage}
-              alt={post.title.rendered}
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
-          </picture>
+          <CardImage
+            square={squareImage}
+            rect={rectImage}
+            wide={wide}
+            eager={eager}
+            alt={post.title.rendered}
+          />
         )}
         {hasExternalLink && post.acf.external_link_image && (
           <div className="absolute bottom-5 right-5 w-12 h-12 md:w-16 md:h-16 bg-[#111111] rounded-2xl md:rounded-[1.25rem] flex items-center justify-center text-white shadow-xl z-10">
@@ -145,7 +177,7 @@ const Cases: React.FC<CasesProps> = ({ posts, categories }) => {
         {filteredCases.map((post, index) => (
           // Широкий слот — только у первого поста И только если у него загружено
           // прямоугольное превью; иначе встаёт квадратом в общий ряд.
-          <CaseCard key={post.id} post={post} wide={index === 0 && !!post.acf?.preview_rect} />
+          <CaseCard key={post.id} post={post} wide={index === 0 && !!post.acf?.preview_rect} eager={index === 0} />
         ))}
       </div>
     </section>
